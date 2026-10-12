@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "enabled": true,
+  "mode": "once",
+  "min_minutes": 129600,
+  "max_minutes": 129600,
+  "next_send_at": "2027-01-10T16:22:26Z",
+  "state": "scheduled",
+  "claim_run_id": null,
+  "claim_run_attempt": null,
+  "last_send": null,
+  "history": []
+}
