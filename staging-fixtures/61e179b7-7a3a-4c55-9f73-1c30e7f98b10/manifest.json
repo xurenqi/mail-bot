@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "request_id": "61e179b7-7a3a-4c55-9f73-1c30e7f98b10",
+  "image_bytes": 69,
+  "image_sha256": "b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640",
+  "part_count": 1,
+  "part_sha256": [
+    "b1ff9c8ea3a780bad09b346c423d2d0e46815926879b18e841d928376a946640"
+  ]
+}
