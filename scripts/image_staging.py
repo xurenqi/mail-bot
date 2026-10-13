@@ -30,6 +30,22 @@ def validate_manifest(m):
         raise StagingError('invalid chunk hashes')
     return m
 
+def encode_parts(data, rid):
+    """Build text-only chunks for create_file; no GitHub or SMTP calls."""
+    from .comic_mail import image_type
+    if not isinstance(data, bytes) or not 0 < len(data) <= MAX_BYTES:
+        raise StagingError('invalid image size')
+    if not isinstance(rid, str) or not UUID.fullmatch(rid):
+        raise StagingError('invalid request id')
+    image_type(data)
+    chunks = [data[i:i + PART_BYTES] for i in range(0, len(data), PART_BYTES)]
+    manifest = {'version': 1, 'request_id': rid, 'image_bytes': len(data),
+                'image_sha256': hashlib.sha256(data).hexdigest(),
+                'part_count': len(chunks),
+                'part_sha256': [hashlib.sha256(chunk).hexdigest() for chunk in chunks]}
+    return manifest, [base64.b64encode(chunk).decode('ascii') for chunk in chunks]
+
+
 def decode_parts(manifest, parts):
     m = validate_manifest(manifest)
     if len(parts) != m['part_count']:
