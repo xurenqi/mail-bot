@@ -1,4 +1,4 @@
-"""Owner-only, one-shot public request files; no SMTP or shell execution here."""
+"""Owner-only, one-shot encrypted request files; no SMTP or shell execution here."""
 import json
 import os
 from pathlib import Path
@@ -6,6 +6,7 @@ import re
 import tempfile
 
 from .comic_mail import content, request_id
+from .request_crypto import RequestCryptoError, decrypt_envelope
 from .task_queue import TaskError, TaskStore, target_time
 from .time_utils import parse_utc
 
@@ -47,6 +48,25 @@ def validate(data, rid):
     return event
 
 
+def decrypt_request_file(document, rid):
+    if (not isinstance(document, dict) or type(document.get('version')) is not int
+            or document.get('version') != 2
+            or set(document) != {'version', 'request_id', 'encrypted'}
+            or document.get('request_id') != rid):
+        raise TaskError('请求必须是版本 2 加密文件；未发送。')
+    private_key = os.environ.get('MAIL_REQUEST_PRIVATE_KEY', '')
+    if not private_key:
+        raise TaskError('缺少 Actions Secret MAIL_REQUEST_PRIVATE_KEY；未发送。')
+    try:
+        plaintext = decrypt_envelope(document['encrypted'], private_key)
+        data = json.loads(plaintext.decode('utf-8'), object_pairs_hook=unique_object)
+    except RequestCryptoError as exc:
+        raise TaskError(str(exc)) from None
+    except (UnicodeError, ValueError, TypeError):
+        raise TaskError('加密请求明文结构无效；未发送。') from None
+    return validate(data, rid)
+
+
 def added_requests(api, event):
     owner = os.environ.get('GITHUB_REPOSITORY_OWNER','')
     if (os.environ.get('GITHUB_EVENT_NAME') != 'push'
@@ -84,7 +104,7 @@ def prepare(api, *, root=None):
         raw = stream.read(1024*1024+1)
     if len(raw) > 1024*1024:
         raise TaskError('推送事件超过读取限制；未发送。')
-    paths = added_requests(api, json.loads(raw))
+    paths = added_requests(api, json.loads(raw, object_pairs_hook=unique_object))
     if not paths:
         return None
     path = paths[0]
@@ -103,7 +123,8 @@ def prepare(api, *, root=None):
         raw = stream.read(LIMIT+1)
     if len(raw.encode('utf-8')) > LIMIT:
         raise TaskError('请求文件超过读取限制；未发送。')
-    event = validate(json.loads(raw,object_pairs_hook=unique_object),rid)
+    document = json.loads(raw, object_pairs_hook=unique_object)
+    event = decrypt_request_file(document, rid)
     # Existing custom-content adapter reads a bounded event file, never env logs.
     with tempfile.TemporaryDirectory(prefix='mail-request-') as temporary:
         local_event = Path(temporary)/'event.json'
