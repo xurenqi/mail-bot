@@ -161,6 +161,23 @@ def prepare(api,*,event=None,now=None):
     if kind in {'custom','comic'}:
         # Reuse existing validation, without displaying plaintext step envs.
         subject,body=send_mail.custom_content()
+    if (kind=='custom' and action=='发送邮件'
+            and not repeat and subject is not None
+            and not event.get('image_path')):
+        # A manual repeat of an already accepted letter becomes a fresh status
+        # notification. Scheduled/background duplicates stay silent.
+        raw=json.dumps({'subject':subject,'body':body},ensure_ascii=False).encode('utf-8')
+        digest=hashlib.sha256(raw).hexdigest()
+        if any(t.get('accepted_at') and t['content'].get('kind')=='custom'
+               and t['content'].get('payload',{}).get('sha256')==digest
+               and not t['content'].get('attachment')
+               for t in store.load()[0]['tasks'].values()):
+            kind='notice'
+            subject='小澪邮件提醒｜当前没有新的信件任务'
+            body=('小澪检查过啦：这封信此前已经成功提交给邮件服务器，'
+                  '因此本次没有重复发送原信。\\n\\n'
+                  '当前点击发送的内容没有新的待发送信件任务。'
+                  '这里的成功指 SMTP 已接收，不保证最终进入收件箱。')
     if kind=='comic':
         from .comic_mail import Requests, adopt, digest_payload
         owner=os.environ.get('GITHUB_REPOSITORY_OWNER','')
@@ -223,7 +240,7 @@ def deliver(api,task,*,smtp_sender=None):
     previous=dict(os.environ)
     try:
         os.environ.update(IMAGE_PATH='',IMAGE_PATHS='',MAIL_FROM_NAME='',MAIL_DEADLINE=task.get('expires_at') or '')
-        if kind in {'custom','comic'}:
+        if kind in {'custom','comic','notice'}:
             payload=task['content']['payload']
             release=api.request('GET',f"/repos/{api.repo}/releases/{payload['release_id']}")
             if release.get('draft') is not True or release.get('tag_name')!=RELEASE_TAG:raise TaskError('私有正文存储不再是草稿。')
@@ -270,7 +287,7 @@ def deliver(api,task,*,smtp_sender=None):
             raise TaskError('内容或附件准备失败，尚未调用 SMTP；核验文案预留与附件配置。') from None
         raise
     finally:
-        if kind in {'custom','comic'} and 'event_path' in locals():
+        if kind in {'custom','comic','notice'} and 'event_path' in locals():
             try:Path(event_path).unlink()
             except OSError:print('临时正文清理失败；不改变发送结果。',file=sys.stderr)
         if directory:
