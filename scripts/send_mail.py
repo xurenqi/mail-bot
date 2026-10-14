@@ -140,7 +140,7 @@ def build_message(sender, recipient, kind):
     message["Message-ID"] = make_msgid(domain="qq.com")
     if kind == "notice":
         message["Subject"] = "小澪邮件机器人｜当前没有新邮件任务"
-        body = random.SystemRandom().choice(NOTICE_LINES)
+        body = os.environ.get("NOTICE_TEXT") or random.SystemRandom().choice(NOTICE_LINES)
     elif kind == "test":
         message["Subject"] = "邮件机器人测试：你好！"
         body = "这是一封来自 GitHub Actions 的测试邮件。\n中文 UTF-8 编码正常。祝你今天顺利！"
