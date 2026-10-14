@@ -25,18 +25,31 @@ PREPARED_MODE = 'A'  # A=GitHub delivery; B requires external reminder integrati
 
 
 def custom_default_timing():
+    """Validate the current letter's explicit instruction, never its story text."""
     if PREPARED_TIMING.strip():
         return PREPARED_TIMING.strip()
     from .dragon_letters import MAIL_INSTRUCTION
     instruction=MAIL_INSTRUCTION
-    if not isinstance(instruction,dict) or set(instruction)!={'delivery','min_delay','max_delay','repeat'}:
+    if not isinstance(instruction,dict) or instruction.get('repeat') is not False:
         raise TaskError('预设邮件发送配置无效，未创建任务。')
-    if instruction['delivery'] != 'random' or instruction['repeat'] is not False:
-        raise TaskError('预设邮件仅支持一次性随机延迟发送。')
-    low=instruction['min_delay'];high=instruction['max_delay']
-    if not isinstance(low,str) or not isinstance(high,str):
-        raise TaskError('预设邮件时间参数无效。')
-    timing=f'random:{low}:{high}'
+    delivery=instruction.get('delivery')
+    if delivery=='now' and set(instruction)=={'delivery','repeat'}:
+        timing='now'
+    elif delivery=='after' and set(instruction)=={'delivery','delay','repeat'}:
+        delay=instruction['delay']
+        if not isinstance(delay,str):raise TaskError('预设邮件延迟格式无效。')
+        timing=f'after:{delay}'
+    elif delivery=='random' and set(instruction)=={'delivery','min_delay','max_delay','repeat'}:
+        low=instruction['min_delay'];high=instruction['max_delay']
+        if not isinstance(low,str) or not isinstance(high,str):
+            raise TaskError('预设邮件随机时间参数无效。')
+        timing=f'random:{low}:{high}'
+    elif delivery=='at' and set(instruction)=={'delivery','time','repeat'}:
+        timing=instruction['time']
+        if not isinstance(timing,str) or not timing or timing=='now' or timing.startswith(('after:','random:')):
+            raise TaskError('预设邮件绝对时间必须带时区。')
+    else:
+        raise TaskError('预设邮件发送配置无效，未创建任务。')
     target_time(timing)
     return timing
 
