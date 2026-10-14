@@ -240,7 +240,7 @@ def deliver(api,task,*,smtp_sender=None):
     previous=dict(os.environ)
     try:
         os.environ.update(IMAGE_PATH='',IMAGE_PATHS='',MAIL_FROM_NAME='',MAIL_DEADLINE=task.get('expires_at') or '')
-        if kind in {'custom','comic'}:
+        if kind in {'custom','comic','notice'}:
             payload=task['content']['payload']
             release=api.request('GET',f"/repos/{api.repo}/releases/{payload['release_id']}")
             if release.get('draft') is not True or release.get('tag_name')!=RELEASE_TAG:raise TaskError('私有正文存储不再是草稿。')
