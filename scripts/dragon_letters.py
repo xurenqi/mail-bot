@@ -82,7 +82,7 @@ PREPARED_BODY = "【小澪的原创日常｜今晚的新篇】\n\n夜里，星�
 
 
 # Explicit delivery metadata. Story text is never parsed for scheduling.
-MAIL_INSTRUCTION = {'delivery': 'random', 'min_delay': '3m', 'max_delay': '5m', 'repeat': False}
+MAIL_INSTRUCTION = {'delivery': 'now', 'repeat': False}  # Each new letter can set its own instruction.
 
 
 def prepared_letter():
