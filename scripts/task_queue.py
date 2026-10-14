@@ -97,7 +97,7 @@ def validate(task):
         from .issue_relay import validate as validate_relay
         validate_relay(task)
         task_id(task['id'])
-        if task['status'] not in STATES or task['content']['kind'] not in {'test','random','dragon','custom','comic'}:
+        if task['status'] not in STATES or task['content']['kind'] not in {'test','random','dragon','custom','comic','notice'}:
             raise ValueError
         parse_utc(task['created_at'])
         if task.get('accepted_at'):parse_utc(task['accepted_at'])
