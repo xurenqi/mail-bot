@@ -111,7 +111,8 @@ def prepare(api,*,event=None,now=None):
     kind=kinds[action]
     if action in {'发送邮件','循环发送'}:
         style=event.get('mail_style') or '小澪预设信'
-        styles={'小澪预设信':'custom','随机来信':'random','小龙娘随机故事':'dragon'}
+        styles={'小澪预设信':'custom','小龙娘的随机故事':'dragon',
+                '随机来信':'dragon','小龙娘随机故事':'dragon'}}
         if style not in styles:raise TaskError('未知邮件风格，未创建任务。')
         kind=styles[style]
     if action in {'发送自定义邮件','发送邮件','循环发送'} and kind=='custom' and custom_delivery_mode()=='B':
