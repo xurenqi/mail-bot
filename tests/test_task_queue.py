@@ -23,7 +23,7 @@ NOW=datetime(2026,10,20,12,0,tzinfo=timezone.utc)
 class PreparedInstructionTests(unittest.TestCase):
     def test_default_reads_explicit_metadata(self):
         with patch.object(task_runner,'PREPARED_TIMING',''):
-            self.assertEqual(task_runner.custom_default_timing(),'random:3m:5m')
+            self.assertEqual(task_runner.custom_default_timing(),'now')
 
     def test_manual_timing_still_takes_priority(self):
         with patch.object(task_runner,'PREPARED_TIMING','after:10m'):
@@ -258,14 +258,12 @@ class RunnerTests(unittest.TestCase):
             task_runner.prepare(self.api,now=NOW)
         self.assertFalse(TaskStore(self.api).load()[0]['tasks'])
 
-    def test_blank_custom_timing_uses_prepared_random_window(self):
+    def test_blank_custom_timing_uses_current_letter_instruction(self):
         self.event_write(action='发送自定义邮件', custom_subject='title', custom_body='body')
         with patch.object(task_runner, 'PREPARED_TIMING', ''), patch.object(task_runner, 'PREPARED_MODE', 'A'):
-            self.assertIsNone(task_runner.prepare(self.api,now=NOW))
-        task=next(iter(self.api.queue['tasks'].values()))
-        target=datetime.fromisoformat(task['target_at'].replace('Z','+00:00'))
-        self.assertGreaterEqual(target,NOW+timedelta(minutes=3))
-        self.assertLessEqual(target,NOW+timedelta(minutes=5))
+            rid=task_runner.prepare(self.api,now=NOW)
+        task=TaskStore(self.api).get(rid)
+        self.assertEqual(task['target_at'],NOW.isoformat().replace('+00:00','Z'))
         self.assertIsNone(task['repeat'])
 
     def test_prepared_time_and_manual_override(self):
