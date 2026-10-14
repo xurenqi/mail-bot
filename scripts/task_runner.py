@@ -25,7 +25,20 @@ PREPARED_MODE = 'A'  # A=GitHub delivery; B requires external reminder integrati
 
 
 def custom_default_timing():
-    return PREPARED_TIMING.strip() or 'now'
+    if PREPARED_TIMING.strip():
+        return PREPARED_TIMING.strip()
+    from .dragon_letters import MAIL_INSTRUCTION
+    instruction=MAIL_INSTRUCTION
+    if not isinstance(instruction,dict) or set(instruction)!={'delivery','min_delay','max_delay','repeat'}:
+        raise TaskError('预设邮件发送配置无效，未创建任务。')
+    if instruction['delivery'] != 'random' or instruction['repeat'] is not False:
+        raise TaskError('预设邮件仅支持一次性随机延迟发送。')
+    low=instruction['min_delay'];high=instruction['max_delay']
+    if not isinstance(low,str) or not isinstance(high,str):
+        raise TaskError('预设邮件时间参数无效。')
+    timing=f'random:{low}:{high}'
+    target_time(timing)
+    return timing
 
 
 def custom_delivery_mode():
