@@ -200,6 +200,38 @@ class TaskStore:
         return self.load()[0]['tasks'].get(task_id(rid))
 
 
+
+def same_delivered_message(first, later):
+    """Only compare snapshotted custom/comic messages; never guess random content."""
+    if first['content']['kind'] not in {'custom', 'comic'} or later['content']['kind'] != first['content']['kind']:
+        return False
+    a, b = first['content'], later['content']
+    if not a.get('payload') or not b.get('payload'):
+        return False
+    # Body/subject snapshot hashes are content-based, unlike per-task asset IDs.
+    if a['payload']['sha256'] != b['payload']['sha256']:
+        return False
+    # Do not suppress a mail with a different attachment.
+    image_a, image_b = a.get('attachment'), b.get('attachment')
+    if bool(image_a) != bool(image_b):
+        return False
+    if image_a and image_a['sha256'] != image_b['sha256']:
+        return False
+    # The repository's configured recipient is shared by these tasks.
+    return parse_utc(first['created_at']) <= parse_utc(later['created_at'])
+
+
+def cancel_delivered_duplicates(tasks, delivered, now):
+    """Cancel only later queued copies after SMTP acceptance was recorded."""
+    for candidate in tasks.values():
+        if candidate['id'] == delivered['id'] or candidate['status'] != 'queued':
+            continue
+        if same_delivered_message(delivered, candidate):
+            candidate.update(status='cancelled', last_result='cancelled',
+                             finished_at=format_utc(now), reason='duplicate_already_accepted',
+                             claim=None)
+
+
 class Tasks:
     def __init__(self, store, *, now=None, choose=None):
         self.store, self.now, self.choose = store, now or utc_now, choose
@@ -219,6 +251,12 @@ class Tasks:
         def change(tasks):
             task = tasks[rid]
             if task['status'] != 'queued': return None
+            for previous in tasks.values():
+                if (previous['id'] != rid and previous.get('accepted_at')
+                        and same_delivered_message(previous, task)):
+                    task.update(status='cancelled', last_result='cancelled',
+                                finished_at=format_utc(now), reason='duplicate_already_accepted')
+                    return None
             if task.get('expires_at') and parse_utc(task['expires_at']) < now:
                 task.update(status='expired',finished_at=format_utc(now),last_result='expired')
                 return None
@@ -241,6 +279,8 @@ class Tasks:
             finish_relay(task, result)
             task.update(status=result,last_result=result,claim=None,finished_at=ended,reason=reason)
             if accepted_at: task['accepted_at'] = format_utc(parse_utc(accepted_at))
+            if result == 'accepted':
+                cancel_delivered_duplicates(tasks, task, self.now())
             if result == 'accepted' and task['repeat']:
                 target = next_target(task,task['accepted_at'],choose=self.choose)
                 if not task.get('expires_at') or parse_utc(target) <= parse_utc(task['expires_at']):
