@@ -1,4 +1,4 @@
-name: 邮件机器人（统一入口）
+name: 小澪的邮件机器人
 run-name: ${{ github.event_name == 'schedule' && '定时检查' || github.event_name == 'push' && '代码检查' || github.event_name == 'pull_request' && '代码检查' || inputs.action
   || '查看状态' }}
 'on':
