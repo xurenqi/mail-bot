@@ -319,16 +319,25 @@ def make_report(api, repo, now=None, check_interval="60"):
         else:
             lines.append(f"{LETTER_LABEL}尚无运行记录。")
     queue=TaskStore(api).load()[0]
+    # Index task evidence once instead of rescanning every task for each run.
+    # Keep the same proof precedence and output labels as the previous logic.
+    proofs_by_run = {}
+    origins_by_run = {}
+    for task in queue['tasks'].values():
+        origin_id = task.get('origin', {}).get('run_id')
+        if origin_id is not None:
+            origins_by_run.setdefault(origin_id, []).append(task)
+        for proof in task.get('history', []):
+            key = (str(proof['run_id']), int(proof.get('attempt', proof.get('run_attempt', 1))))
+            proofs_by_run.setdefault(key, []).append(proof)
     for entry in manual:
-        proofs=[proof for task in queue['tasks'].values() for proof in task.get('history',[])
-                if str(proof['run_id'])==str(entry['run_id'])
-                and int(proof.get('attempt',proof.get('run_attempt',1)))==entry['run_attempt']]
+        proofs = proofs_by_run.get((str(entry['run_id']), entry['run_attempt']), [])
         if proofs:
             proof=max(proofs,key=lambda item:item['occurred_at'])
             entry.update(result={'accepted':'SMTP 已接受','failed':'明确失败或未发送','uncertain':'结果不确定，禁止重发','expired':'超过截止时间，未发送'}.get(proof['status'],'未知'),
                          date=timestamp(proof['occurred_at']),time_source='SMTP 接受' if proof.get('time_source')=='smtp_accepted' else '结果记录')
         else:
-            matching=[task for task in queue['tasks'].values() if task.get('origin',{}).get('run_id')==str(entry['run_id'])]
+            matching=origins_by_run.get(str(entry['run_id']), [])
             if matching:entry['result']='未确认 SMTP；任务状态：'+', '.join(sorted({task['status'] for task in matching}))
     active=[task for task in queue['tasks'].values() if task['status'] in {'queued','staging','sending'}]
     if active:
