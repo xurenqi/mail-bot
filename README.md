@@ -144,3 +144,8 @@ ChatGPT Tasks 必须有自己的图片、文件、终端工具与 GitHub 授权�
 本地运行 `python -m unittest discover -s tests -v`，测试模拟 GitHub/SMTP，不发送真实邮件。
 覆盖时区、延迟、重复规则、迁移、并发占用、取消、过期、失败、清理、UTF-8 与真实格式图片 MIME 字节。
 无需新增 QQ Secrets。
+
+## 小澪聊天邮件入口
+
+外部生成的“紫瞳夜话”等正文可通过带 `CHAT_MAIL_TOKEN` 认证的独立入口创建一次性
+`custom` 任务，复用现有账本、私有内容存储与 QQ SMTP 发送链路。见 [部署与调用说明](docs/chat-mail.md)。
