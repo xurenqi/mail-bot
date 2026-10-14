@@ -237,7 +237,7 @@ class RunnerTests(unittest.TestCase):
                            ('随机来信','dragon'),('小龙娘随机故事','dragon')]:
             with self.subTest(style=style):
                 self.api=TaskAPI()
-                self.event_write(action='发送邮件',mail_style=style,custom_body='test body')
+                self.event_write(action='发送邮件',mail_style=style,custom_body='test body',timing='now')
                 rid=task_runner.prepare(self.api,now=NOW)
                 self.assertEqual(TaskStore(self.api).get(rid)['content']['kind'],kind)
 
@@ -258,12 +258,14 @@ class RunnerTests(unittest.TestCase):
             task_runner.prepare(self.api,now=NOW)
         self.assertFalse(TaskStore(self.api).load()[0]['tasks'])
 
-    def test_blank_custom_timing_is_immediate_and_nonrepeating(self):
+    def test_blank_custom_timing_uses_prepared_random_window(self):
         self.event_write(action='发送自定义邮件', custom_subject='title', custom_body='body')
         with patch.object(task_runner, 'PREPARED_TIMING', ''), patch.object(task_runner, 'PREPARED_MODE', 'A'):
-            rid=task_runner.prepare(self.api,now=NOW)
-        task=TaskStore(self.api).get(rid)
-        self.assertEqual(task['target_at'],NOW.isoformat().replace('+00:00','Z'))
+            self.assertIsNone(task_runner.prepare(self.api,now=NOW))
+        task=next(iter(self.api.queue['tasks'].values()))
+        target=datetime.fromisoformat(task['target_at'].replace('Z','+00:00'))
+        self.assertGreaterEqual(target,NOW+timedelta(minutes=3))
+        self.assertLessEqual(target,NOW+timedelta(minutes=5))
         self.assertIsNone(task['repeat'])
 
     def test_prepared_time_and_manual_override(self):
