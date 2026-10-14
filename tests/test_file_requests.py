@@ -24,7 +24,9 @@ class FileRequestTests(unittest.TestCase):
         (self.root/'mail-requests').mkdir()
         self.message = {'version':1,'request_id':self.rid,'action':'发送自定义邮件',
                         'subject':'中文标题','body':'中文正文 $(never-execute)','timing':'now'}
-        (self.root/self.path).write_text(json.dumps(self.message))
+        self.document = {'version':2,'request_id':self.rid,'encrypted':{
+            'algorithm':'test','wrapped_key':'dGVzdA==','ciphertext':'dGVzdA==','mac':'dGVzdA=='}}
+        (self.root/self.path).write_text(json.dumps(self.document))
         self.api = TaskAPI()
         self.api.repo = 'xurenqi/mail-bot'
         self.event = {'repository':{'full_name':self.api.repo},'sender':{'login':'xurenqi'},
@@ -34,7 +36,8 @@ class FileRequestTests(unittest.TestCase):
         self.env = patch.dict(os.environ, {'GITHUB_REPOSITORY_OWNER':'xurenqi',
             'GITHUB_ACTOR':'xurenqi','GITHUB_TRIGGERING_ACTOR':'xurenqi',
             'GITHUB_SHA':'b'*40,'GITHUB_REF':'refs/heads/main','GITHUB_EVENT_NAME':'push',
-            'GITHUB_EVENT_PATH':str(self.event_file),'GITHUB_ACTIONS':'true','GITHUB_RUN_ID':'123'}, clear=True)
+            'GITHUB_EVENT_PATH':str(self.event_file),'GITHUB_ACTIONS':'true','GITHUB_RUN_ID':'123',
+            'MAIL_REQUEST_PRIVATE_KEY':'test-only-key'}, clear=True)
         self.env.start()
         self.addCleanup(self.env.stop)
         original = self.api.request
@@ -45,11 +48,17 @@ class FileRequestTests(unittest.TestCase):
             return original(method,path,data)
         self.api.request = request
 
+    def decrypt_fixture(self, envelope, private_key):
+        self.assertEqual(envelope,self.document['encrypted'])
+        self.assertEqual(private_key,'test-only-key')
+        return json.dumps(self.message,ensure_ascii=False).encode('utf-8')
+
     def prepare(self):
-        with contextlib.redirect_stdout(io.StringIO()):
+        with patch('scripts.file_requests.decrypt_envelope', side_effect=self.decrypt_fixture), \
+                contextlib.redirect_stdout(io.StringIO()):
             return file_requests.prepare(self.api,root=self.root)
 
-    def test_new_file_uses_existing_queue_and_never_sends_during_prepare(self):
+    def test_new_encrypted_file_uses_existing_queue_and_never_sends_during_prepare(self):
         with patch('scripts.send_mail.send') as sender:
             self.assertEqual(self.prepare(), self.rid)
             sender.assert_not_called()
@@ -66,7 +75,6 @@ class FileRequestTests(unittest.TestCase):
 
     def test_future_timestamp_is_queued_without_immediate_execution(self):
         self.message['timing'] = '2099-01-01T00:00:00+08:00'
-        (self.root/self.path).write_text(json.dumps(self.message))
         self.assertIsNone(self.prepare())
         self.assertEqual(TaskStore(self.api).get(self.rid)['status'],'queued')
 
@@ -102,6 +110,16 @@ class FileRequestTests(unittest.TestCase):
         with self.assertRaises(TaskError):
             self.prepare()
 
+    def test_plaintext_request_files_are_rejected(self):
+        (self.root/self.path).write_text(json.dumps(self.message,ensure_ascii=False))
+        with self.assertRaises(TaskError):
+            self.prepare()
+
+    def test_missing_private_key_fails_closed(self):
+        with patch.dict(os.environ,{'MAIL_REQUEST_PRIVATE_KEY':''}):
+            with self.assertRaises(TaskError):
+                file_requests.decrypt_request_file(self.document,self.rid)
+
     def test_empty_body_unknown_fields_and_id_mismatch_rejected(self):
         for change in ({'body':''},{'command':'execute'},{'request_id':str(uuid.uuid4())},
                        {'repeat_rule':'every:1m'},{'version':True},{'timing':{}},
@@ -111,7 +129,7 @@ class FileRequestTests(unittest.TestCase):
 
     def test_duplicate_json_fields_and_size_limit_rejected(self):
         file = self.root/self.path
-        file.write_text('{"version":1,"version":2}')
+        file.write_text('{"version":2,"version":3}')
         with self.assertRaises(TaskError):
             self.prepare()
         file.write_text('x'*(file_requests.LIMIT+1))
