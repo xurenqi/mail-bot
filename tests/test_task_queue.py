@@ -36,6 +36,35 @@ class PreparedInstructionTests(unittest.TestCase):
         self.assertEqual(len(set(NOTICE_LINES+EXTRA_LINES)),
                          len(NOTICE_LINES+EXTRA_LINES))
 
+    def test_notice_inventory_reserves_without_repeating_and_refills(self):
+        from scripts.notice_inventory import reserve, PATH as INVENTORY_PATH
+        from scripts.send_mail import NOTICE_LINES
+        class InventoryAPI:
+            repo='example/test'
+            def __init__(self):
+                self.saved=None
+                self.version=0
+            def request(self,method,path,data=None):
+                if method=='GET':
+                    if self.saved is None:raise GitHubAPIError('missing',status=404)
+                    return {'sha':str(self.version),'content':base64.b64encode(
+                        json.dumps(self.saved).encode()).decode()}
+                if method=='PUT':
+                    if data.get('sha') != (str(self.version) if self.saved else None):
+                        raise GitHubAPIError('conflict',status=409)
+                    self.saved=json.loads(base64.b64decode(data['content']))
+                    self.version+=1
+                    return {'content':{'sha':str(self.version)}}
+                raise AssertionError((method,path))
+        api=InventoryAPI()
+        with patch('scripts.notice_inventory.StateBranch.ensure_branch'):
+            first=[reserve(api) for _ in range(36)]
+        self.assertEqual(len(set(first)),36)
+        self.assertEqual(api.saved['refills'],1)
+        self.assertEqual(api.saved['extras_added'],10)
+        self.assertEqual(len(api.saved['used']),36)
+        self.assertEqual(len(api.saved['available']),4)
+
     def test_notice_pool_contains_thirty_messages(self):
         from scripts.send_mail import NOTICE_LINES, build_message
         self.assertEqual(len(NOTICE_LINES),30)
