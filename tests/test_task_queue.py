@@ -102,6 +102,18 @@ class TasksTests(unittest.TestCase):
         self.assertIsNone(self.engine.claim(self.rid,'123',2))
         with self.assertRaises(TaskError):self.engine.create(self.task)
 
+    def test_duplicate_accepted_content_cancels_later_queued_task(self):
+        payload={'asset_id':1,'release_id':1,'sha256':'a'*64}
+        content={'kind':'custom','payload':payload}
+        first=new_task(self.rid,content,NOW.isoformat(),now=NOW)
+        later=new_task(str(uuid.uuid4()),content,NOW.isoformat(),now=NOW+timedelta(minutes=1))
+        self.engine.create(first)
+        self.engine.create(later)
+        claimed=self.engine.claim(first['id'],'123')
+        self.engine.finish(claimed,'accepted',NOW.isoformat())
+        self.assertEqual(self.store.get(later['id'])['status'],'cancelled')
+        self.assertIsNone(self.engine.claim(later['id'],'124'))
+
     def test_definite_cas_conflict_retries_state_but_uncertain_write_does_not(self):
         self.api.conflict=True;self.engine.create(self.task)
         writes=[call for call in self.api.calls if call[0]=='PUT' and PATH in call[1]]
