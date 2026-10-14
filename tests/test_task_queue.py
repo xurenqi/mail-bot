@@ -26,6 +26,16 @@ class PreparedInstructionTests(unittest.TestCase):
             with patch('scripts.dragon_letters.MAIL_INSTRUCTION',{'delivery':'random','min_delay':'3m','max_delay':'5m','repeat':False}):
                 self.assertEqual(task_runner.custom_default_timing(),'random:3m:5m')
 
+    def test_notice_inventory_initial_state_and_extra_pool(self):
+        from scripts.notice_inventory import _fresh, _validate, EXTRA_LINES
+        from scripts.send_mail import NOTICE_LINES
+        state=_fresh()
+        _validate(state)
+        self.assertEqual(len(state['available']),30)
+        self.assertGreaterEqual(len(EXTRA_LINES),10)
+        self.assertEqual(len(set(NOTICE_LINES+EXTRA_LINES)),
+                         len(NOTICE_LINES+EXTRA_LINES))
+
     def test_notice_pool_contains_thirty_messages(self):
         from scripts.send_mail import NOTICE_LINES, build_message
         self.assertEqual(len(NOTICE_LINES),30)
