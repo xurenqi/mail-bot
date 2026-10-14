@@ -20,6 +20,22 @@ from test_comic_mail import FakeAPI, png
 
 NOW=datetime(2026,10,20,12,0,tzinfo=timezone.utc)
 
+class PreparedInstructionTests(unittest.TestCase):
+    def test_default_reads_explicit_metadata(self):
+        with patch.object(task_runner,'PREPARED_TIMING',''):
+            self.assertEqual(task_runner.custom_default_timing(),'random:3m:5m')
+
+    def test_manual_timing_still_takes_priority(self):
+        with patch.object(task_runner,'PREPARED_TIMING','after:10m'):
+            self.assertEqual(task_runner.custom_default_timing(),'after:10m')
+
+    def test_invalid_instruction_fails_closed(self):
+        with patch.object(task_runner,'PREPARED_TIMING',''):
+            with patch('scripts.dragon_letters.MAIL_INSTRUCTION',{'delivery':'now'}):
+                with self.assertRaises(TaskError):
+                    task_runner.custom_default_timing()
+
+
 
 class TaskAPI(FakeAPI):
     def __init__(self):
