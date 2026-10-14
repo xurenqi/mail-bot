@@ -217,7 +217,8 @@ class RunnerTests(unittest.TestCase):
         self.event.write_text(json.dumps({'inputs':values}))
 
     def test_consolidated_send_uses_selected_style(self):
-        for style,kind in [('小澪预设信','custom'),('随机来信','random'),('小龙娘随机故事','dragon')]:
+        for style,kind in [('小澪预设信','custom'),('小龙娘的随机故事','dragon'),
+                           ('随机来信','dragon'),('小龙娘随机故事','dragon')]:
             with self.subTest(style=style):
                 self.api=TaskAPI()
                 self.event_write(action='发送邮件',mail_style=style,custom_body='test body')
