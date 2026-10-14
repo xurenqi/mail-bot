@@ -1,5 +1,5 @@
 name: 邮件机器人（统一入口）
-run-name: ${{ github.event_name == 'schedule' && '定时检查' || github.event_name == 'push' && '代码检查' || github.event_name == 'pull_request' && '代码检查' || inputs.action
+run-name: \${{ github.event_name == 'schedule' && '定时检查' || github.event_name == 'push' && '代码检查' || github.event_name == 'pull_request' && '代码检查' || inputs.action
   || '查看状态' }}
 'on':
   workflow_dispatch:
@@ -106,7 +106,7 @@ jobs:
       actions: read
       issues: read
     concurrency:
-      group: mail-bot-tasks-${{ github.event_name == 'schedule' && 'poll' || inputs.action == '查看状态' && 'status' || 'control' }}
+      group: mail-bot-tasks-\${{ github.event_name == 'schedule' && 'poll' || inputs.action == '查看状态' && 'status' || 'control' }}
       cancel-in-progress: false
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -118,25 +118,26 @@ jobs:
     - name: 保存或管理统一任务
       id: prepare
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+        MAIL_REQUEST_PRIVATE_KEY: \${{ github.event_name == 'push' && secrets.MAIL_REQUEST_PRIVATE_KEY || '' }}
       run: python -m scripts.task_runner prepare
     - name: Execute unified mail tasks via QQ SMTP
       if: steps.prepare.outputs.execute == 'true'
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        TASK_ID: ${{ steps.prepare.outputs.task_id }}
-        QQ_EMAIL: ${{ secrets.QQ_EMAIL }}
-        QQ_SMTP_AUTH_CODE: ${{ secrets.QQ_SMTP_AUTH_CODE }}
-        MAIL_TO: ${{ secrets.MAIL_TO }}
+        GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+        TASK_ID: \${{ steps.prepare.outputs.task_id }}
+        QQ_EMAIL: \${{ secrets.QQ_EMAIL }}
+        QQ_SMTP_AUTH_CODE: \${{ secrets.QQ_SMTP_AUTH_CODE }}
+        MAIL_TO: \${{ secrets.MAIL_TO }}
       run: python -m scripts.task_runner run
     - name: 清理已结束任务附件（不改写发送结果）
-      if: ${{ always() && inputs.action != '查看状态' }}
+      if: \${{ always() && inputs.action != '查看状态' }}
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
       run: python -m scripts.task_runner cleanup
     - name: 生成统一任务状态与历史
-      if: ${{ always() && github.event_name == 'workflow_dispatch' }}
+      if: \${{ always() && github.event_name == 'workflow_dispatch' }}
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        CHECK_INTERVAL: ${{ vars.MAIL_BOT_POLL_MINUTES || '60' }}
+        GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+        CHECK_INTERVAL: \${{ vars.MAIL_BOT_POLL_MINUTES || '60' }}
       run: python -m scripts.status_history
