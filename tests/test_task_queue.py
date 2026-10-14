@@ -26,6 +26,15 @@ class PreparedInstructionTests(unittest.TestCase):
             with patch('scripts.dragon_letters.MAIL_INSTRUCTION',{'delivery':'random','min_delay':'3m','max_delay':'5m','repeat':False}):
                 self.assertEqual(task_runner.custom_default_timing(),'random:3m:5m')
 
+    def test_notice_pool_contains_thirty_messages(self):
+        from scripts.send_mail import NOTICE_LINES, build_message
+        self.assertEqual(len(NOTICE_LINES),30)
+        self.assertEqual(len(set(NOTICE_LINES)),30)
+        message=build_message('sender@example.com','receiver@example.com','notice')
+        self.assertIn('没有新邮件任务',str(message['Subject']))
+        self.assertTrue(any(line in message.get_body(preferencelist=('plain',)).get_content()
+                            for line in NOTICE_LINES))
+
     def test_manual_timing_still_takes_priority(self):
         with patch.object(task_runner,'PREPARED_TIMING','after:10m'):
             self.assertEqual(task_runner.custom_default_timing(),'after:10m')

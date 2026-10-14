@@ -97,6 +97,40 @@ def custom_content():
     return subject, body
 
 
+NOTICE_LINES = (
+    "又来敲信箱啦？上一封已经出发，今天先送你一个云朵抱抱。",
+    "小澪检查了三遍：没有漏掉的新信，只有你留下的小小期待。",
+    "信箱空空，心意满满。下次有新故事再悄悄寄给你。",
+    "今天的信已经顺利交给邮差啦，记得给自己一点休息时间。",
+    "没有新任务也没关系，能在信箱门口遇见你就很开心。",
+    "这次不重复寄旧信，改送你一句：愿今天顺顺利利。",
+    "叮咚！检测到熟悉的敲门声。正文已经寄过啦。",
+    "你是不是想试试按钮会不会再变出一封信？被我发现了！",
+    "信箱管理员小澪举起小牌子：今日无新任务，禁止复制粘贴惊喜。",
+    "按一下是来信，按两下是小澪的碎碎念，规则记住了吗？",
+    "今天没有第二份相同的礼物，但有第二份问候。",
+    "尾巴雷达扫描完毕：新信数量为零，想念指数正常上涨。",
+    "欸嘿，你又来看我啦？先让我偷偷开心三秒钟。",
+    "再点一次也不能把昨天的月亮寄两遍哦。",
+    "小澪把重复的信轻轻收好，给你换成一张小纸条。",
+    "按钮被你按得有点害羞了，今天就先到这里吧。",
+    "如果信箱会说话，它一定会说：欢迎回来！",
+    "没有新的正文，只有小澪认真写下的一句晚安预备役。",
+    "今天的小任务：喝点水，伸个懒腰，再继续忙自己的事。",
+    "窗边的风替我翻了翻信箱，确实没有新信。",
+    "现在没有新任务。下一封故事准备好时，再让它出发。",
+    "小澪正在整理信纸，旧信不重寄，新故事慢慢写。",
+    "邮件机器人巡检完成：原信已接收，无待发送的新正文。",
+    "本次为重复发送请求，已跳过原信，改发状态提示。",
+    "当前没有新的邮件任务。系统未重复发送已接收的正文。",
+    "上一封已由邮件服务器接收，本次只发送这条确认消息。",
+    "任务账本显示原信已处理，新的正文任务数量为零。",
+    "防重复保护已生效：旧信不再投递，提示信正常生成。",
+    "本次手动检查结束：没有需要重新发送的正文。",
+    "小澪信箱状态：安静、整洁、没有重复信件待发。",
+)
+
+
 def build_message(sender, recipient, kind):
     message = EmailMessage(policy=policy.SMTP)
     message["From"] = sender
@@ -104,7 +138,10 @@ def build_message(sender, recipient, kind):
     written_at = utc_now()
     message["Date"] = format_datetime(written_at.astimezone(BEIJING))
     message["Message-ID"] = make_msgid(domain="qq.com")
-    if kind == "test":
+    if kind == "notice":
+        message["Subject"] = "小澪邮件机器人｜当前没有新邮件任务"
+        body = random.SystemRandom().choice(NOTICE_LINES)
+    elif kind == "test":
         message["Subject"] = "邮件机器人测试：你好！"
         body = "这是一封来自 GitHub Actions 的测试邮件。\n中文 UTF-8 编码正常。祝你今天顺利！"
     elif kind == "random":
@@ -120,7 +157,7 @@ def build_message(sender, recipient, kind):
         subject, body = custom_content()
         message["Subject"] = subject
     else:
-        raise ConfigurationError("MESSAGE_TYPE 仅支持 test、random 或 custom")
+        raise ConfigurationError("MESSAGE_TYPE 仅支持 test、random、custom 或 notice")
     message.set_content(letter_with_time(body, written_at), charset="utf-8")
     return message
 

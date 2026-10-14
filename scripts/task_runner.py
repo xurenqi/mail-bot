@@ -161,6 +161,19 @@ def prepare(api,*,event=None,now=None):
     if kind in {'custom','comic'}:
         # Reuse existing validation, without displaying plaintext step envs.
         subject,body=send_mail.custom_content()
+    # A manual repeat of an already accepted one-shot letter gets a fresh notice,
+    # not a second copy of the letter. Scheduled checks remain silent.
+    if (action == '发送邮件' and kind == 'custom' and not repeat_text
+            and not event.get('image_path') and subject is not None):
+        fingerprint=hashlib.sha256(json.dumps(
+            {'subject':subject,'body':body},ensure_ascii=False).encode('utf-8')).hexdigest()
+        earlier=store.load()[0]['tasks'].values()
+        if any(t.get('accepted_at') and t['content']['kind']=='custom'
+               and t['content'].get('payload',{}).get('sha256')==fingerprint
+               for t in earlier):
+            kind='notice'
+            target=format_utc(now)
+            print('原信已由 SMTP 接收；改为发送随机无新任务提示。')
     if kind=='comic':
         from .comic_mail import Requests, adopt, digest_payload
         owner=os.environ.get('GITHUB_REPOSITORY_OWNER','')
@@ -177,6 +190,8 @@ def prepare(api,*,event=None,now=None):
                                'sha256':artifact['image_sha256'],'mime':artifact['mime'],'size':artifact['size']}
     elif event.get('image_path'):
         content['image_path']=event['image_path']
+    content['kind']=kind
+    if kind=='notice': subject=body=None
     staging=subject is not None or bool(content.get('image_path'))
     task=new_task(rid,content,target,repeat,expires,now=now,status='staging' if staging else 'queued')
     task['origin']={'run_id':os.environ.get('GITHUB_RUN_ID',''),'attempt':int(os.environ.get('GITHUB_RUN_ATTEMPT','1'))}
@@ -242,7 +257,7 @@ def deliver(api,task,*,smtp_sender=None):
             from .issue_relay import render
             body += render(task.get('issue_relay', []))
             os.environ.update(MAIL_SUBJECT=subject,MAIL_BODY=body,MESSAGE_TYPE='random')
-        else:os.environ['MESSAGE_TYPE']='test'
+        else:os.environ['MESSAGE_TYPE']='notice' if kind=='notice' else 'test'
         if task['content'].get('attachment'):
             artifact=task['content']['attachment']
             release=api.request('GET',f"/repos/{api.repo}/releases/{artifact['release_id']}")
