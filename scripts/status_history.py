@@ -330,6 +330,18 @@ def make_report(api, repo, now=None, check_interval="60"):
         else:
             matching=[task for task in queue['tasks'].values() if task.get('origin',{}).get('run_id')==str(entry['run_id'])]
             if matching:entry['result']='未确认 SMTP；任务状态：'+', '.join(sorted({task['status'] for task in matching}))
+    active=[task for task in queue['tasks'].values() if task['status'] in {'queued','staging','sending'}]
+    if active:
+        queued=sum(task['status']=='queued' for task in active)
+        sending=sum(task['status']=='sending' for task in active)
+        staging=sum(task['status']=='staging' for task in active)
+        lines += ['', '## ⚠️ 已有邮件任务正在等待或处理', '',
+                  f'当前有 **{len(active)} 个未结束任务**（待发送 {queued}、发送中 {sending}、准备中 {staging}）。',
+                  '**请勿因工作流变绿但暂未收到邮件，就再次点击「发送邮件」；否则可能创建另一封相同邮件。**',
+                  '下面的「统一任务」表可查看任务编号和目标时间。此提醒只显示在运行摘要中，不会改变任务状态或自动发送。', '']
+    else:
+        lines += ['', '## 当前没有待发送或正在处理的邮件任务', '',
+                  '可以按需新建邮件。请注意已完成的邮件仍可能在收件端延迟显示。', '']
     if queue.get('legacy_migrated') or queue['tasks']:
         labels={'queued':'等待目标时间','sending':'处理中','accepted':'SMTP 已接受','failed':'失败或未发送',
                 'uncertain':'结果不确定，禁止重发','cancelled':'已取消','expired':'超过截止时间，未发送',
