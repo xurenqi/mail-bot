@@ -172,6 +172,7 @@ def prepare(api,*,event=None,now=None):
                and t['content'].get('payload',{}).get('sha256')==fingerprint
                for t in earlier):
             kind='notice'
+            target=format_utc(now)
             print('原信已由 SMTP 接收；改为发送随机无新任务提示。')
     if kind=='comic':
         from .comic_mail import Requests, adopt, digest_payload
