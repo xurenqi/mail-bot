@@ -257,7 +257,11 @@ def deliver(api,task,*,smtp_sender=None):
             from .issue_relay import render
             body += render(task.get('issue_relay', []))
             os.environ.update(MAIL_SUBJECT=subject,MAIL_BODY=body,MESSAGE_TYPE='random')
-        else:os.environ['MESSAGE_TYPE']='notice' if kind=='notice' else 'test'
+        else:
+            os.environ['MESSAGE_TYPE']='notice' if kind=='notice' else 'test'
+            if kind=='notice':
+                from .notice_inventory import reserve as reserve_notice
+                os.environ['NOTICE_TEXT']=reserve_notice(api)
         if task['content'].get('attachment'):
             artifact=task['content']['attachment']
             release=api.request('GET',f"/repos/{api.repo}/releases/{artifact['release_id']}")
