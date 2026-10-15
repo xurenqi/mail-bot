@@ -27,4 +27,4 @@
 
 检查全部通过后才会入队；owner-only 限制同时在 workflow 和脚本校验，不接受 PR 或强制推送。普通 ChatGPT 的具体 GitHub 连接器必须支持当前仓库的写入及选择 main。工具缺失或授权不足时说明限制，不改用 Gmail，也不声称已发送。
 
-本入口没有完成普通 ChatGPT `create_file` 的真实端到端测试。部署提交不包含请求 JSON，不发送测试邮件。
+**已完成真实文字邮件链路测试（2026-10-15）：** 普通 ChatGPT 使用 GitHub `create_file` 在 `main` 创建单次请求，GitHub Actions 接收对应 `push`，收件人确认收到 QQ SMTP 邮件。测试提交 `c40afcb1a281900bdee99015c40a7f14c926a238`，工作流运行 `38668099368`。这不代表漫画、循环或自定义 GPT Action 已验证。AI 使用完整规范见 [AI 操作手册](../docs/ai-usage.md)。
