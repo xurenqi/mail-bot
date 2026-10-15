@@ -237,7 +237,10 @@ def deliver(api,task,*,smtp_sender=None):
     smtp_started=False
     previous=dict(os.environ)
     try:
-        os.environ.update(IMAGE_PATH='',IMAGE_PATHS='',MAIL_FROM_NAME='',MAIL_DEADLINE=task.get('expires_at') or '')
+        os.environ.update(IMAGE_PATH='',IMAGE_PATHS='',MAIL_FROM_NAME='',MAIL_DEADLINE=task.get('expires_at') or '', MAIL_WRITTEN_AT='')
+        if kind in {'custom', 'comic'}:
+            # Task creation is the first GitHub processing of the composed letter.
+            os.environ['MAIL_WRITTEN_AT'] = format_utc(parse_utc(task['created_at']))
         if kind in {'custom','comic'}:
             payload=task['content']['payload']
             release=api.request('GET',f"/repos/{api.repo}/releases/{payload['release_id']}")
