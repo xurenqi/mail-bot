@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "request_id": "a41f9b70-62c4-4f6d-9d18-7e3b06e81245",
+  "action": "发送自定义邮件",
+  "subject": "小澪邮件机器人链路测试",
+  "body": "这是一封通过普通 ChatGPT、GitHub 文件请求与 GitHub Actions 发出的测试信。用于验证现有 QQ SMTP 邮件链路。此信不包含私人信息，也不需要回复。",
+  "timing": "now"
+}
