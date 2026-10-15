@@ -1,5 +1,8 @@
 # Mail bot operation
 
+**AI entrypoint selection:** Read [docs/ai-usage.md](docs/ai-usage.md) before operating. For ordinary ChatGPT with GitHub create_file but no terminal, use the verified one-shot public request-file entry; do not attempt CLI commands. The request-file entry cannot create repeats, cancel tasks or attach images. Respect public repository privacy and never retry uncertain submissions with a new UUID.
+
+
 Use the existing checkout. Cloud tasks already run in isolation; create a Git worktree only if the user explicitly requests one.
 
 The bot runs in GitHub Actions. The platform starts and removes temporary runners; this repository does not expose SSH, operating-system shutdown, or a permanent server.
