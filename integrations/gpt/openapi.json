@@ -61,11 +61,10 @@
                       "action": {
                         "type": "string",
                         "enum": [
-                          "发送自定义邮件",
-                          "发送随机来信",
-                          "发送小龙娘来信",
+                          "发送邮件",
                           "发送漫画邮件"
-                        ]
+                        ],
+                        "description": "与 random.yml workflow_dispatch 选项保持一致；普通自定义邮件选发送邮件。"
                       },
                       "request_id": {
                         "type": "string",
@@ -95,6 +94,14 @@
                       "expires_at": {
                         "type": "string",
                         "description": "可选截止时间，必须带时区；超过后不发送。"
+                      },
+                      "mail_style": {
+                        "type": "string",
+                        "enum": [
+                          "小澪预设信",
+                          "小龙娘的随机故事"
+                        ],
+                        "description": "发送邮件时选择内容类型；自定义正文使用小澪预设信。"
                       }
                     }
                   }
