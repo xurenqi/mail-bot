@@ -135,8 +135,10 @@ def build_message(sender, recipient, kind):
     message = EmailMessage(policy=policy.SMTP)
     message["From"] = sender
     message["To"] = recipient
-    written_at = utc_now()
-    message["Date"] = format_datetime(written_at.astimezone(BEIJING))
+    # For queued custom letters, preserve the timestamp from task creation.
+    # For generated-at-delivery letters, the current time is their creation time.
+    written_at = parse_utc(os.environ["MAIL_WRITTEN_AT"]) if os.environ.get("MAIL_WRITTEN_AT") else utc_now()
+    message["Date"] = format_datetime(utc_now().astimezone(BEIJING))
     message["Message-ID"] = make_msgid(domain="qq.com")
     if kind == "notice":
         message["Subject"] = "小澪邮件机器人｜当前没有新邮件任务"
