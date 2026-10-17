@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "request_id": "ead1d3af-17d9-49a9-b106-0ff614b5e2d6",
+  "action": "发送自定义邮件",
+  "subject": "小澪图片链接测试",
+  "body": "小澪刚生成的测试图片链接：\n\nsandbox:/mnt/data/a_dreamy_anime_style_digital_illustration_scene.png\n\n注意：这是 ChatGPT 内部文件链接，不是公开 HTTPS 图片地址。可能只能在原 ChatGPT 会话中打开，无法由 GitHub Actions 或其他客户端直接下载。",
+  "timing": "now"
+}
