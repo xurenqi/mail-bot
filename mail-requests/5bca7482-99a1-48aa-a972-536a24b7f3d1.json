@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "request_id": "5bca7482-99a1-48aa-a972-536a24b7f3d1",
+  "action": "发送自定义邮件",
+  "subject": "小澪新图片链接 💜",
+  "body": "这是刚刚重新生成的小澪龙娘图片链接：\n\nsandbox:/mnt/data/a_highly_detailed_anime_style_illustration_of_the.png\n\n注意：这是 ChatGPT 内部文件链接，不是公开 HTTPS 图片网址；QQ 邮箱中可能无法直接打开。此邮件只发送文字链接，不包含图片附件。",
+  "timing": "now"
+}
