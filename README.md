@@ -30,7 +30,7 @@
 
 ## 唯一入口
 
-打开 **Actions → 邮件机器人（统一入口） → Run workflow**。
+打开 **Actions → 小澪的邮件机器人 → Run workflow**。
 `action` 默认是 **查看状态**，不发送、不修改任务。
 
 | 操作 | 内容 |
